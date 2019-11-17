@@ -16,8 +16,10 @@ or
 stack run
 ```
 
-# Basic Concept of Kalman Filters
 
-# Need for Linear Models
+# Basic Concept Of Kalman Filters
 
-# Outline of Implementation
+# Intuition For The Need Of Linear Models
+
+# Outline Of Implementation
+

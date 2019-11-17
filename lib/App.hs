@@ -4,7 +4,7 @@ module App
   , Sensor (..)
 
   , send
-  , receive
+  , recv
   , runApp ) where
 
 import Data.Aeson
@@ -90,8 +90,8 @@ send conn msg =
   WS.sendTextData conn $ append "42" (encode msg)
 
 
-receive :: WS.Connection -> IO Sensor
-receive conn = do
+recv :: WS.Connection -> IO Sensor
+recv conn = do
   msgData <- WS.receiveData conn
 
   let msgCode = Data.ByteString.Lazy.take 2 msgData
@@ -106,7 +106,7 @@ receive conn = do
   where
     continue = do
        WS.sendTextData conn ("42[\"manual\",{}]" :: ByteString)
-       receive conn
+       recv conn
 
 
 server :: (WS.Connection -> IO ()) -> WS.ServerApp

@@ -1,6 +1,42 @@
-module EKF where
+module EKF
+  ( KF (..)
+
+  , makeFilter
+  ) where
+
+import App (Sensor (..))
 
 import Numeric.LinearAlgebra
+
+
+data KF = KF
+  { kf_x :: Vector Double
+  , kf_p :: Matrix Double
+  , kf_t :: Double
+  } deriving Show
+
+
+makeFilter (Laser px py ct) =
+  KF { kf_x = vector [px,
+                      py,
+                      0,
+                      0]
+     , kf_p = matrix 4 [1, 0,    0,    0,
+                        0, 1,    0,    0,
+                        0, 0, 1000,    0,
+                        0, 0,    0, 1000]
+     , kf_t = ct }
+
+makeFilter (Radar rho phi rho' ct) =
+  KF { kf_x = vector [rho  * cos phi,
+                      rho  * sin phi,
+                      rho' * cos phi,
+                      rho' * sin phi]
+     , kf_p = matrix 4 [1, 0,    0,    0,
+                        0, 1,    0,    0,
+                        0, 0, 1000,    0,
+                        0, 0,    0, 1000]
+     , kf_t = ct }
 
 
 {-
@@ -35,7 +71,7 @@ mainLoop t x p = do
     Nothing  -> skip
     Just obj -> filter $ getVals (measurement obj)
   where
-    filter (Laser vals =
+    filter (Laser vals) =
       let
         px   = vals !! 0
         py   = vals !! 1
@@ -120,10 +156,4 @@ mainLoop t x p = do
           in do
             writeSim (x'' ^. _x) (x'' ^. _y)
             mainLoop curT x'' p''
-
-main =
-  mainLoop 0 (V4 0 0 0 0) (V4 (V4 1 0    0    0)
-                              (V4 0 1    0    0)
-                              (V4 0 0 1000    0)
-                              (V4 0 0    0 1000))
 -}
