@@ -127,9 +127,15 @@ update (Radar rho phi rho' t) kf =
     zPhi  = (atan2 py px)
     zRho' = (px*vx + py*vy) / zRho
 
-    h = (3><4) [px / c2, py / c2, 0, 0,
+    h = (3><4) [-- Row 1
+                px / c2, py / c2, 0, 0,
+                -- Row 2
                 -py / c1, px / c1, 0, 0,
-                py*(vx * py - vy * px)/c3, px*(vy * px - vx * py)/c3, px/c2, py/c2]
+                -- Row 3
+                py*(vx * py - vy * px)/c3,
+                px*(vy * px - vx * py)/c3,
+                px/c2,
+                py/c2]
     r = (3><3) [0.09, 0.0000, 0.00,
                 0.00, 0.0009, 0.00,
                 0.00, 0.0000, 0.09]
