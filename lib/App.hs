@@ -51,38 +51,38 @@ data Sensor
   = Laser
     { lPx :: Double
     , lPy :: Double
-    , lT  :: Double }
+    , lT  :: Word }
   | Radar
     { rRho  :: Double
     , rPhi  :: Double
     , rRho' :: Double
-    , rT    :: Double }
+    , rT    :: Word }
   deriving Show
 
 readSensor :: String -> Sensor
 readSensor s
   | (Prelude.head s == 'L') =
     let
-      px = vals !! 0
-      py = vals !! 1
-      t  = vals !! 2
+      px = read $ vals !! 0 :: Double
+      py = read $ vals !! 1 :: Double
+      t  = read $ vals !! 2 :: Word
     in
       Laser { lPx = px
             , lPy = py
             , lT  = t }
   | (Prelude.head s == 'R') =
     let
-      rho  = vals !! 0
-      phi  = vals !! 1
-      rho' = vals !! 2
-      t    = vals !! 3
+      rho  = read $ vals !! 0 :: Double
+      phi  = read $ vals !! 1 :: Double
+      rho' = read $ vals !! 2 :: Double
+      t    = read $ vals !! 3 :: Word
     in
       Radar { rRho  = rho
             , rPhi  = phi
             , rRho' = rho'
             , rT    = t }
   where
-    vals = Prelude.map read (words $ Prelude.tail s) :: [Double]
+    vals = words $ Prelude.tail s
 
 
 send :: WS.Connection -> Response -> IO ()

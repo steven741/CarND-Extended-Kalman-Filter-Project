@@ -19,7 +19,7 @@ import Numeric.LinearAlgebra
 data KF = KF
   { kf_x :: Vector Double
   , kf_p :: Matrix Double
-  , kf_t :: Double
+  , kf_t :: Word
   } deriving Show
 
 
@@ -62,7 +62,7 @@ predict s kf =
 
     -- Delta-time. Essentially a timestep.
     dt =
-      (sensorTime - filterTime) / 1000000.0
+      (fromIntegral (sensorTime - filterTime)) / 1000000.0
 
     noiseAx = 9
     noiseAy = 9
