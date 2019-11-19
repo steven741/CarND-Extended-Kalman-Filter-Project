@@ -51,7 +51,7 @@ data Sensor
   = Laser
     { lPx :: Double
     , lPy :: Double
-    , lT :: Double }
+    , lT  :: Double }
   | Radar
     { rRho  :: Double
     , rPhi  :: Double
@@ -80,7 +80,7 @@ readSensor s
       Radar { rRho  = rho
             , rPhi  = phi
             , rRho' = rho'
-            , rT   = t }
+            , rT    = t }
   where
     vals = Prelude.map read (words $ Prelude.tail s) :: [Double]
 
