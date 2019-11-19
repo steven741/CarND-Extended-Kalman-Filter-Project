@@ -51,12 +51,12 @@ data Sensor
   = Laser
     { lPx :: Double
     , lPy :: Double
-    , lCt :: Double }
+    , lT :: Double }
   | Radar
     { rRho  :: Double
     , rPhi  :: Double
     , rRho' :: Double
-    , rCt   :: Double }
+    , rT    :: Double }
   deriving Show
 
 readSensor :: String -> Sensor
@@ -65,22 +65,22 @@ readSensor s
     let
       px = vals !! 0
       py = vals !! 1
-      ct = vals !! 2
+      t  = vals !! 2
     in
       Laser { lPx = px
             , lPy = py
-            , lCt = ct }
+            , lT  = t }
   | (Prelude.head s == 'R') =
     let
       rho  = vals !! 0
       phi  = vals !! 1
       rho' = vals !! 2
-      ct   = vals !! 3
+      t    = vals !! 3
     in
       Radar { rRho  = rho
             , rPhi  = phi
             , rRho' = rho'
-            , rCt   = ct }
+            , rT   = t }
   where
     vals = Prelude.map read (words $ Prelude.tail s) :: [Double]
 

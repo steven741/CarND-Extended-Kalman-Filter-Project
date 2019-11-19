@@ -1,8 +1,15 @@
 module EKF
-  ( KF (..)
+  ( KF
+  , kf_x
+  , kf_p
+  , kf_t
 
   , makeFilter
+  , predict
+  , update
   ) where
+
+import Prelude hiding ((<>))
 
 import App (Sensor (..))
 
@@ -16,144 +23,123 @@ data KF = KF
   } deriving Show
 
 
-makeFilter (Laser px py ct) =
-  KF { kf_x = vector [px,
-                      py,
-                      0,
-                      0]
-     , kf_p = matrix 4 [1, 0,    0,    0,
-                        0, 1,    0,    0,
-                        0, 0, 1000,    0,
-                        0, 0,    0, 1000]
-     , kf_t = ct }
+makeFilter (Laser px py t) =
+  KF { kf_x = 4 |> [px,
+                    py,
+                    0,
+                    0]
+     , kf_p = (4><4) [1, 0,    0,    0,
+                      0, 1,    0,    0,
+                      0, 0, 1000,    0,
+                      0, 0,    0, 1000]
+     , kf_t = t }
 
-makeFilter (Radar rho phi rho' ct) =
-  KF { kf_x = vector [rho  * cos phi,
-                      rho  * sin phi,
-                      rho' * cos phi,
-                      rho' * sin phi]
-     , kf_p = matrix 4 [1, 0,    0,    0,
-                        0, 1,    0,    0,
-                        0, 0, 1000,    0,
-                        0, 0,    0, 1000]
-     , kf_t = ct }
+makeFilter (Radar rho phi rho' t) =
+  KF { kf_x = 4 |> [rho  * cos phi,
+                    rho  * sin phi,
+                    rho' * cos phi,
+                    rho' * sin phi]
+     , kf_p =  (4><4) [1, 0,    0,    0,
+                       0, 1,    0,    0,
+                       0, 0, 1000,    0,
+                       0, 0,    0, 1000]
+     , kf_t = t }
 
 
-{-
-predict dt x p =
-  let
+predict :: Sensor -> KF -> (Vector Double, Matrix Double)
+predict s kf =
+  (x, p)
+  where
+    -- Basicly current time.
+    sensorTime =
+      case s of
+        (Laser px py t) -> t
+        (Radar rho phi rho' t) -> t
+
+    -- Time inside the filter.
+    filterTime =
+      kf_t kf
+
+    -- Delta-time. Essentially a timestep.
+    dt =
+      (sensorTime - filterTime) / 1000000.0
+
     noiseAx = 9
     noiseAy = 9
 
-    dt2     = dt ** 2
-    dt3     = dt ** 3
-    dt4     = dt ** 4
+    dt2 = dt ** 2
+    dt3 = dt ** 3
+    dt4 = dt ** 4
 
-    f = (V4 (V4 1 0 dt  0)
-            (V4 0 1  0 dt)
-            (V4 0 0  1  0)
-            (V4 0 0  0  1))
-    q = (V4 (V4 ((dt4/4)*noiseAx)               0 ((dt3/2)*noiseAx) 0)
-            (V4               0 ((dt4/4)*noiseAy)               0 ((dt3/2)*noiseAy))
-            (V4 ((dt3/2)*noiseAx)               0   (dt2*noiseAx) 0)
-            (V4               0 ((dt3/2)*noiseAy)               0 (dt2*noiseAy)))
+    f = (4><4) [1, 0, dt,  0,
+                0, 1,  0, dt,
+                0, 0,  1,  0,
+                0, 0,  0,  1]
 
-    x' = f !* x
-    p' = f !*! p !*! (transpose f) !+! q
-  in
-    (x', p')
+    q = (4><4) [(dt4/4)*noiseAx, 0, (dt3/2)*noiseAx, 0,
+                0, (dt4/4)*noiseAy, 0, (dt3/2)*noiseAy,
+                (dt3/2)*noiseAx, 0, dt2*noiseAx, 0,
+                0, (dt3/2)*noiseAy, 0, dt2*noiseAy]
+    x = f #> kf_x kf
+    p = f <> kf_p kf <> (tr f) + q
 
 
-mainLoop t x p = do
-  msg <- getLine
-
-  case getMsg msg of
-    Nothing  -> skip
-    Just obj -> filter $ getVals (measurement obj)
+update (Laser px py t) kf =
+  KF { kf_x = x'
+     , kf_p = p'
+     , kf_t = t }
   where
-    filter (Laser vals) =
-      let
-        px   = vals !! 0
-        py   = vals !! 1
-        curT = vals !! 2
-        dt   = ((curT - t)/1000000.0)
-      in
-        if t == 0
-        then
-          mainLoop curT (V4 px py 0 0) p
-        else
-          let
-            (x', p') = predict dt x p
+    (x, p) = predict (Laser px py t) kf
 
-            h = (V2 (V4 1 0 0 0)
-                    (V4 0 1 0 0))
-            r = (V2 (V2 0.0225 0.0000)
-                    (V2 0.0000 0.0225))
-            y = (V2 px py) - (h !* x')
+    h = (2><4) [1, 0, 0, 0,
+                0, 1, 0, 0]
+    r = (2><2) [0.0225, 0.0000,
+                0.0000, 0.0225]
+    y = 2 |> [px, py] - (h #> x)
 
-            i  = identity
-            ht = (transpose h)
-            s  = h !*! p' !*! ht !+! r
-            si = inv22 s
-            k  = p' !*! ht !*! si
+    ht = tr h
+    s  = h <> p <> ht + r
+    si = inv s
+    k  = p <> ht <> si
 
-            x'' = x' + (k !* y)
-            p'' = (i - k !*! h) !*! p'
-          in do
-            writeSim (x'' ^. _x) (x'' ^. _y)
-            mainLoop curT x'' p''
+    x' = x + (k #> y)
+    p' = (ident 4 - k <> h) <> p
 
-    filter (Radar vals) =
-      let
-        rho  = vals !! 0
-        phi  = vals !! 1
-        rho' = vals !! 2
-        curT = vals !! 3
-        px   = rho * (cos phi)
-        py   = rho * (sin phi)
-        vx   = rho' * (cos phi)
-        vy   = rho' * (sin phi)
-        dt   = ((curT - t)/1000000.0)
-      in
-        if t == 0
-        then
-          mainLoop curT (V4 px py vx vy) p
-        else
-          let
-            (x', p') = predict dt x p
 
-            -- Calculate the Jacobian matrix values 
-            px = x' ^. _x
-            py = x' ^. _y
-            vx = x' ^. _z
-            vy = x' ^. _w
+update (Radar rho phi rho' t) kf =
+  KF { kf_x = x'
+     , kf_p = p'
+     , kf_t = t }
+  where
+    (x, p) = predict (Radar rho phi rho' t) kf
 
-            c1 = (px ** 2) + (py ** 2)
-            c2 = (sqrt c1)
-            c3 = (c1 * c2);
+    -- Calculate the Jacobian matrix values 
+    px = x ! 0
+    py = x ! 1
+    vx = x ! 2
+    vy = x ! 3
 
-            zRho  = c2;
-            zPhi  = (atan2 py px)
-            zRho' = (px*vx + py*vy) / zRho
+    c1 = px ** 2 + py ** 2
+    c2 = sqrt c1
+    c3 = c1 * c2
 
-            h = (V3 (V4 (px / c2) (py / c2) 0 0)
-                    (V4 (-py / c1) (px / c1) 0 0)
-                    (V4 (py*(vx * py - vy * px)/c3) (px*(vy * px - vx * py)/c3) (px/c2) (py/c2)))
-            r = (V3 (V3 0.09 0.0000 0.00)
-                    (V3 0.00 0.0009 0.00)
-                    (V3 0.00 0.0000 0.09))
-            z = (V3 rho phi rho') - (V3 zRho zPhi zRho')
-            y = (V3  (z ^. _x) (atan2 (sin (z ^. _y)) (cos (z ^. _y))) (z ^. _z))
+    zRho  = c2;
+    zPhi  = (atan2 py px)
+    zRho' = (px*vx + py*vy) / zRho
 
-            i  = identity
-            ht = (transpose h)
-            s  = h !*! p' !*! ht !+! r
-            si = inv33 s
-            k  = p' !*! ht !*! si
+    h = (3><4) [px / c2, py / c2, 0, 0,
+                -py / c1, px / c1, 0, 0,
+                py*(vx * py - vy * px)/c3, px*(vy * px - vx * py)/c3, px/c2, py/c2]
+    r = (3><3) [0.09, 0.0000, 0.00,
+                0.00, 0.0009, 0.00,
+                0.00, 0.0000, 0.09]
+    z = 3 |> [rho, phi, rho'] - 3 |> [zRho, zPhi, zRho']
+    y = 3 |> [z ! 0, atan2 (sin (z ! 1)) (cos (z ! 1)), z ! 2]
 
-            x'' = x' + (k !* y)
-            p'' = (i - k !*! h) !*! p'
-          in do
-            writeSim (x'' ^. _x) (x'' ^. _y)
-            mainLoop curT x'' p''
--}
+    ht = tr h
+    s  = h <> p <> ht + r
+    si = inv s
+    k  = p <> ht <> si
+
+    x' = x + (k #> y)
+    p' = (ident 4 - k <> h) <> p
