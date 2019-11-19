@@ -19,9 +19,9 @@ stack run
 
 ## Basic Concept Of Kalman Filters
 
-Kalman filters are a class of information filters that can filter noise from measurments. When given enough information kalman filters often produce useful estimations. The source of the information that kalman filters use usually come from mathematical models and sensor measurments. The sensor measurments that kalman filters update on need not be from one source. That is to say that a kalman filter may update it's belief based sensor measurments of various types. This concept, of using multiple sources of information, is sometimes called sensor fusion.
+Kalman filters are a class of information filters that can filter noise from measurments. When given enough information kalman filters often produce useful estimations. The source of the information that kalman filters use come from mathematical models and sensor measurments. The sensor measurments that kalman filters update on need not be from one source. That is to say that a kalman filter may update it's belief based on sensor measurments of various types. This concept, of using multiple sources of information, is sometimes called sensor fusion.
 
-A kalman filter can be understood generally as having 2 components: a state space and an error space. The state space is an estimate of the state we wish to know. For example, if we'd like to know the position of an object the state space may contain some `x, y, z` position values. Or, if we'd like to know the fuel level of a gas tank the state space may contain some `l` value of the remaining liters of fuel in a tank. The error space captures the variance or noise of the information. This space provides the certainty of belief of the filter's estimation.
+A kalman filter can be understood as having 2 components: a state space and an error space. The state space is an estimate of the state we wish to know. For example, if we'd like to know the position of an object the state space may contain some `x, y, z` position values. Or, if we'd like to know the fuel level of a gas tank the state space may contain some `l` value representing the remaining liters of fuel in a tank. The error space captures the variance or noise of the information. This space provides the certainty of belief of the filter's estimation.
 
 
 ## Intuition For The Need Of Linear Models
