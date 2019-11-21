@@ -71,7 +71,6 @@ predict t kf =
                 0, 1,  0, dt,
                 0, 0,  1,  0,
                 0, 0,  0,  1]
-
     q = (4><4) [-- Row 1
                 (dt4/4)*noiseAx, 0, (dt3/2)*noiseAx, 0,
                 -- Row 2
@@ -80,7 +79,8 @@ predict t kf =
                 (dt3/2)*noiseAx, 0, dt2*noiseAx, 0,
                 -- Row 4
                 0, (dt3/2)*noiseAy, 0, dt2*noiseAy]
-    x = f #> kf_x kf
+
+    x = f #> kf_x kf + v
     p = f <> kf_p kf <> (tr f) + q
 
 

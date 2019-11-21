@@ -11,12 +11,6 @@ stack build
 stack exec ekf
 ```
 
-or
-
-```bash
-stack run
-```
-
 
 # Project Writeup
 
@@ -36,7 +30,26 @@ The kalman filter process can be described generally as having 2 steps. A predic
 
 ## Intuition For The Need Of Linearity
 
-
-
 ## Outline Of Implementation
 
+For this project a kalman filter using a constant velocity motion model will be implemented. At any given time we may receive either a lidar or radar sensor measurment. A lidar measurement provides a `x, y` position and, a radar measument provides a `rho, phi, rho'` radial velocity.
+
+To design this filter we must design the equations for the prediction step. The generilzed equations for calculating prediction are:
+
+![Prediction Equations](./doc/predict.png)
+
+`x` and `p` are the state and error spaces. `f` is the state transition matrix. `u` and `q` model the noise or uncertainty of our mathematical model. Our state vector, x, will be `[px, py, vx, xy]` In this case we will be using a linear constant velocity model. So, the equations for the transition between time steps in fairly simple.
+
+* px = px + vx*dt
+* py = py + vy*dt
+* vx = vx
+* vy = vy
+
+So, our state transition matrix will be:
+
+```haskell
+f = (4><4) [1, 0, dt,  0,
+            0, 1,  0, dt,
+            0, 0,  1,  0,
+            0, 0,  0,  1]
+```
