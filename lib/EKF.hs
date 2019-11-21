@@ -67,10 +67,12 @@ predict t kf =
     dt3 = dt ** 3
     dt4 = dt ** 4
 
+    -- State transition matrix
     f = (4><4) [1, 0, dt,  0,
                 0, 1,  0, dt,
                 0, 0,  1,  0,
                 0, 0,  0,  1]
+    -- Noise covariance matrix
     q = (4><4) [-- Row 1
                 (dt4/4)*noiseAx, 0, (dt3/2)*noiseAx, 0,
                 -- Row 2
@@ -80,6 +82,7 @@ predict t kf =
                 -- Row 4
                 0, (dt3/2)*noiseAy, 0, dt2*noiseAy]
 
+    -- Estimated step based on CV motion model
     x = f #> kf_x kf + v
     p = f <> kf_p kf <> (tr f) + q
 
@@ -91,17 +94,20 @@ update (Laser px py t) kf =
   where
     kf' = predict t kf
 
+    -- Measurment projection Matricies
     h = (2><4) [1, 0, 0, 0,
                 0, 1, 0, 0]
     r = (2><2) [0.0225, 0.0000,
                 0.0000, 0.0225]
     y = 2 |> [px, py] - (h #> kf_x kf')
 
+    -- Kalman Filter Equations
     ht = tr h
     s  = h <> kf_p kf' <> ht + r
     si = inv s
     k  = kf_p kf' <> ht <> si
 
+    -- Estimation based on kalman filter gain
     x' = kf_x kf' + (k #> y)
     p' = (ident 4 - k <> h) <> kf_p kf'
 
@@ -127,6 +133,7 @@ update (Radar rho phi rho' t) kf =
     zPhi  = (atan2 py px)
     zRho' = (px*vx + py*vy) / zRho
 
+    -- Measurment projection matricies
     h = (3><4) [-- Row 1
                 px / c2, py / c2, 0, 0,
                 -- Row 2
@@ -142,10 +149,12 @@ update (Radar rho phi rho' t) kf =
     z = 3 |> [rho, phi, rho'] - 3 |> [zRho, zPhi, zRho']
     y = 3 |> [z ! 0, atan2 (sin (z ! 1)) (cos (z ! 1)), z ! 2]
 
+    -- Kalman filter equations
     ht = tr h
     s  = h <> kf_p kf' <> ht + r
     si = inv s
     k  = kf_p kf' <> ht <> si
 
+    -- Estimation based on kalman filter gain
     x' = kf_x kf' + (k #> y)
     p' = (ident 4 - k <> h) <> kf_p kf'
