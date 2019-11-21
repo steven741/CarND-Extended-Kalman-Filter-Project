@@ -46,23 +46,19 @@ makeFilter (Radar rho phi rho' t) =
      , kf_t = t }
 
 
-predict :: Sensor -> KF -> (Vector Double, Matrix Double)
-predict s kf =
-  (x, p)
+predict :: Word -> KF -> KF
+predict t kf =
+  KF { kf_x = x
+     , kf_p = p
+     , kf_t = t }
   where
-    -- Basicly current time.
-    sensorTime =
-      case s of
-        (Laser px py t) -> t
-        (Radar rho phi rho' t) -> t
-
     -- Time inside the filter.
     filterTime =
       kf_t kf
 
     -- Delta-time. Essentially a timestep.
     dt =
-      (fromIntegral (sensorTime - filterTime)) / 1000000.0
+      (fromIntegral (t - filterTime)) / 1000000.0
 
     noiseAx = 9
     noiseAy = 9
@@ -76,9 +72,13 @@ predict s kf =
                 0, 0,  1,  0,
                 0, 0,  0,  1]
 
-    q = (4><4) [(dt4/4)*noiseAx, 0, (dt3/2)*noiseAx, 0,
+    q = (4><4) [-- Row 1
+                (dt4/4)*noiseAx, 0, (dt3/2)*noiseAx, 0,
+                -- Row 2
                 0, (dt4/4)*noiseAy, 0, (dt3/2)*noiseAy,
+                --  Row 3
                 (dt3/2)*noiseAx, 0, dt2*noiseAx, 0,
+                -- Row 4
                 0, (dt3/2)*noiseAy, 0, dt2*noiseAy]
     x = f #> kf_x kf
     p = f <> kf_p kf <> (tr f) + q
@@ -89,21 +89,21 @@ update (Laser px py t) kf =
      , kf_p = p'
      , kf_t = t }
   where
-    (x, p) = predict (Laser px py t) kf
+    kf' = predict t kf
 
     h = (2><4) [1, 0, 0, 0,
                 0, 1, 0, 0]
     r = (2><2) [0.0225, 0.0000,
                 0.0000, 0.0225]
-    y = 2 |> [px, py] - (h #> x)
+    y = 2 |> [px, py] - (h #> kf_x kf')
 
     ht = tr h
-    s  = h <> p <> ht + r
+    s  = h <> kf_p kf' <> ht + r
     si = inv s
-    k  = p <> ht <> si
+    k  = kf_p kf' <> ht <> si
 
-    x' = x + (k #> y)
-    p' = (ident 4 - k <> h) <> p
+    x' = kf_x kf' + (k #> y)
+    p' = (ident 4 - k <> h) <> kf_p kf'
 
 
 update (Radar rho phi rho' t) kf =
@@ -111,13 +111,13 @@ update (Radar rho phi rho' t) kf =
      , kf_p = p'
      , kf_t = t }
   where
-    (x, p) = predict (Radar rho phi rho' t) kf
+    kf' = predict t kf
 
     -- Calculate the Jacobian matrix values 
-    px = x ! 0
-    py = x ! 1
-    vx = x ! 2
-    vy = x ! 3
+    px = kf_x kf' ! 0
+    py = kf_x kf' ! 1
+    vx = kf_x kf' ! 2
+    vy = kf_x kf' ! 3
 
     c1 = px ** 2 + py ** 2
     c2 = sqrt c1
@@ -143,9 +143,9 @@ update (Radar rho phi rho' t) kf =
     y = 3 |> [z ! 0, atan2 (sin (z ! 1)) (cos (z ! 1)), z ! 2]
 
     ht = tr h
-    s  = h <> p <> ht + r
+    s  = h <> kf_p kf' <> ht + r
     si = inv s
-    k  = p <> ht <> si
+    k  = kf_p kf' <> ht <> si
 
-    x' = x + (k #> y)
-    p' = (ident 4 - k <> h) <> p
+    x' = kf_x kf' + (k #> y)
+    p' = (ident 4 - k <> h) <> kf_p kf'
