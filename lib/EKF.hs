@@ -72,6 +72,7 @@ predict t kf =
                 0, 1,  0, dt,
                 0, 0,  1,  0,
                 0, 0,  0,  1]
+
     -- Noise covariance matrix
     q = (4><4) [-- Row 1
                 (dt4/4)*noiseAx, 0, (dt3/2)*noiseAx, 0,
@@ -82,8 +83,17 @@ predict t kf =
                 -- Row 4
                 0, (dt3/2)*noiseAy, 0, dt2*noiseAy]
 
+    -- Noise vector hack
+    x' = f #> kf_x kf
+    ax = x' ! 2 - kf_x kf ! 2
+    ay = x' ! 3 - kf_x kf ! 3
+    v  = 4 |> [ax * 0.5 * dt2,
+               ay * 0.5 * dt2,
+               ax * dt,
+               ay * dt]
+
     -- Estimated step based on CV motion model
-    x = f #> kf_x kf + v
+    x = x' + v
     p = f <> kf_p kf <> (tr f) + q
 
 
@@ -94,7 +104,7 @@ update (Laser px py t) kf =
   where
     kf' = predict t kf
 
-    -- Measurment projection Matricies
+    -- Measurment transition matricies
     h = (2><4) [1, 0, 0, 0,
                 0, 1, 0, 0]
     r = (2><2) [0.0225, 0.0000,
@@ -133,7 +143,7 @@ update (Radar rho phi rho' t) kf =
     zPhi  = (atan2 py px)
     zRho' = (px*vx + py*vy) / zRho
 
-    -- Measurment projection matricies
+    -- Measurment transition matricies
     h = (3><4) [-- Row 1
                 px / c2, py / c2, 0, 0,
                 -- Row 2
