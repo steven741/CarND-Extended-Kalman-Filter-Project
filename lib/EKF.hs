@@ -60,8 +60,12 @@ predict t kf =
     dt =
       (fromIntegral (t - filterTime)) / 1000000.0
 
-    noiseAx = 9
-    noiseAy = 9
+    -- Acceleration noise tuning perameters
+    ax = 3
+    ay = 3
+
+    noiseAx = ax ** 2
+    noiseAy = ay ** 2
 
     dt2 = dt ** 2
     dt3 = dt ** 3
@@ -75,17 +79,15 @@ predict t kf =
 
     -- Noise covariance matrix
     q = (4><4) [-- Row 1
-                (dt4/4)*noiseAx, 0, (dt3/2)*noiseAx, 0,
+                0.25 * noiseAx * dt4, 0, 0.5 * noiseAx * dt3, 0,
                 -- Row 2
-                0, (dt4/4)*noiseAy, 0, (dt3/2)*noiseAy,
+                0, 0.25 * noiseAy * dt4, 0, 0.5 * noiseAy * dt3,
                 --  Row 3
-                (dt3/2)*noiseAx, 0, dt2*noiseAx, 0,
+                0.5 * noiseAx * dt3, 0, noiseAx * dt2, 0,
                 -- Row 4
-                0, (dt3/2)*noiseAy, 0, dt2*noiseAy]
+                0, 0.5 * noiseAy * dt3, 0, noiseAy * dt2]
 
     -- Noise vector
-    ax = sqrt noiseAx
-    ay = sqrt noiseAy
     v  = 4 |> [ax * 0.5 * dt2,
                ay * 0.5 * dt2,
                ax * dt,
