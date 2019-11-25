@@ -83,17 +83,16 @@ predict t kf =
                 -- Row 4
                 0, (dt3/2)*noiseAy, 0, dt2*noiseAy]
 
-    -- Noise vector hack
-    x' = f #> kf_x kf
-    ax = x' ! 2 - kf_x kf ! 2
-    ay = x' ! 3 - kf_x kf ! 3
+    -- Noise vector
+    ax = sqrt noiseAx
+    ay = sqrt noiseAy
     v  = 4 |> [ax * 0.5 * dt2,
                ay * 0.5 * dt2,
                ax * dt,
                ay * dt]
 
     -- Estimated step based on CV motion model
-    x = x' + v
+    x = f #> kf_x kf + v
     p = f <> kf_p kf <> (tr f) + q
 
 
